@@ -1,4 +1,10 @@
 import Image from "next/image";
+import dynamic from 'next/dynamic';
+
+const ClientComponent = dynamic(
+  () => import('./components/SocketClient'),
+  { ssr: false }
+);
 
 export default function Home() {
   return (
@@ -49,6 +55,10 @@ export default function Home() {
           >
             Read our docs
           </a>
+        </div>
+
+        <div className="w-full max-w-md mb-8">
+          <ClientComponent />
         </div>
       </main>
       <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
