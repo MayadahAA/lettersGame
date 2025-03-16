@@ -1,0 +1,276 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-rgb: 255, 255, 255;
+  --primary-blue-dark: 30, 64, 175;
+  --primary-blue-light: 96, 165, 250;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: rgb(91, 91, 91);
+    --background-rgb: 255, 255, 255;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-rgb));
+  font-family: 'Tajawal', sans-serif;
+}
+
+.rtl-dir {
+  direction: rtl;
+}
+
+.gradient-bg {
+  background: linear-gradient(135deg, #1E40AF 0%, #60A5FA 100%);
+}
+
+.rounded-container {
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.btn {
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
+.btn-blue {
+  background-color: #134DCC;
+  color: white;
+}
+
+.btn-green {
+  background-color: #059669;
+  color: white;
+}
+
+.btn-gray {
+  background-color: #6B7280;
+  color: white;
+}
+
+.room-code-input {
+  letter-spacing: 0.1em;
+  font-family: monospace;
+  text-align: center;
+}
+
+
+
+/* styles/LetterCell.css */
+.letter-cell {
+  width: 60px;
+  height: 60px;
+  position: relative;
+  margin: 3px;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  transition: all 0.2s ease;
+}
+
+.letter-cell.empty {
+  background-color: #FEF3C7;
+  border: 2px solid #D1D5DB;
+}
+
+.letter-cell.red-owned {
+  background-color: #FEE2E2;
+  border: 2px solid #EF4444;
+}
+
+.letter-cell.green-owned {
+  background-color: #DCFCE7;
+  border: 2px solid #22C55E;
+}
+
+.letter-cell.selectable {
+  cursor: pointer;
+}
+
+.letter-cell.selectable:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.letter-cell-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.letter {
+  font-size: 24px;
+  font-weight: bold;
+  font-family: "Cairo", sans-serif;
+}
+
+.red-owned .letter {
+  color: #B91C1C;
+}
+
+.green-owned .letter {
+  color: #15803D;
+}
+
+.empty .letter {
+  color: #111827;
+}
+
+/* تأثير النبض للحرف الحالي */
+.pulse-border {
+  position: absolute;
+  inset: -3px;
+  border: 3px solid #60A5FA;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  animation: pulse 1.5s infinite;
+  pointer-events: none;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+}
+
+
+/* styles/HexagonalBoard.css */
+.hexagonal-board {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  margin: 2rem 0;
+}
+
+.hex-row {
+  display: flex;
+  margin-bottom: -7px; /* تداخل الصفوف */
+}
+
+.hex-row.odd {
+  margin-left: 30px; /* إزاحة الصفوف الفردية */
+}
+
+/* علامات حواف اللوحة */
+.board-edges {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.red-edges .edge {
+  position: absolute;
+  width: 20px;
+  height: 100%;
+  background-color: #EF4444;
+}
+
+.red-edges .edge.left {
+  left: 0;
+}
+
+.red-edges .edge.right {
+  right: 0;
+}
+
+.green-edges .edge {
+  position: absolute;
+  width: 100%;
+  height: 20px;
+  background-color: #22C55E;
+}
+
+.green-edges .edge.top {
+  top: 0;
+}
+
+.green-edges .edge.bottom {
+  bottom: 0;
+}
+
+/* أنماط لوحة الحروف السداسية */
+.hexagon-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.hexagon-grid {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hexagon-row {
+  display: flex;
+  margin-bottom: -10px;
+}
+
+.odd-row {
+  margin-left: 30px;
+}
+
+.hexagon {
+  width: 60px;
+  height: 52px;
+  margin: 0 2px;
+  position: relative;
+  cursor: pointer;
+  clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+  transition: all 0.2s;
+}
+
+.hexagon:hover {
+  transform: scale(1.05);
+}
+
+/* أنماط إضافية للمكون الجديد */
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.transition-transform {
+  transition-property: transform;
+}
+
+.duration-200 {
+  transition-duration: 200ms;
+}
+
+.hover\:scale-105:hover {
+  transform: scale(1.05);
+}
+
+.origin-center {
+  transform-origin: center;
+}
