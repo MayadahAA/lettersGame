@@ -45,7 +45,7 @@ export async function POST() {
         currentPlayer: '',
         questionState: 'normal',
         selectedCells: { red: [], green: [] },
-        scores: { red: 0, green: 0 },
+        // scores: { red: 0, green: 0 },
         rounds: { red: 0, green: 0 }
       },
 players: { red: [], green: [] },

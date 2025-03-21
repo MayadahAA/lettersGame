@@ -5,6 +5,7 @@ import HexagonCanvas from './GameBoard';
 // تعريف الواجهة للخصائص المطلوبة
 interface HexagonBoardProps {
   roomCode: string; // رمز الغرفة
+  letter: string;
   questions: { [key: string]: { question: string; answer: string }[] }; // قائمة الأسئلة مصنفة حسب الحرف
   timeLimit: number; 
   players: { id: number; name: string; active: boolean; team: 'red' | 'green' }[]; // معلومات اللاعبين

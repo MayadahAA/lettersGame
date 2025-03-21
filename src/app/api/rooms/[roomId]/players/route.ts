@@ -1,6 +1,23 @@
 import { realtimeDb } from '@/src/lib/firebase';
-import { ref, set, push } from 'firebase/database';
+import { ref, set, push, get } from 'firebase/database';
 import  { NextResponse, NextRequest } from 'next/server';
+
+export async function GET(
+    request: NextRequest,
+    { params }: { params: { roomId: string } }
+  ) {
+    try {
+      const playersRef = ref(realtimeDb, `rooms/${params.roomId}/players`);
+      const snapshot = await get(playersRef);
+      const players = snapshot.val() || {};
+      return NextResponse.json({ players });
+    } catch (error) {
+      if (error instanceof Error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
+    }
+  }
 
 export async function POST(request: NextRequest, { params }: { params: { roomId: string } }) {
     try{
@@ -19,7 +36,7 @@ export async function POST(request: NextRequest, { params }: { params: { roomId:
                 name,
                 score: 0,
                 isConnected: true,
-                lastActive: Date.now(),
+                lastActive: new Date().toUTCString(),
                 stats: { correctAnswers: 0 }
             })
 return NextResponse.json({ message: 'Player added successfully', playerId: newPlayerRef.key }, { status: 200 });
@@ -30,4 +47,6 @@ return NextResponse.json({ message: 'Player added successfully', playerId: newPl
           return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
     }
 }
+
+
 
