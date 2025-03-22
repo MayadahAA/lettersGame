@@ -1,19 +1,29 @@
-import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, DocumentData } from 'firebase/firestore';
 import { db } from '@/src/lib/firebase';
 import { NextRequest, NextResponse } from 'next/server';
 
-// استرجاع سؤال محدد
+// تعريف دالة GET بشكل صحيح
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { letter: string; questionId: string } }
+  request: NextRequest
 ) {
+  const { searchParams } = new URL(request.url);
+  const letter = searchParams.get('letter');
+  const questionId = searchParams.get('questionId');
+
+  if (!letter || !questionId) {
+    return NextResponse.json({ error: 'Letter and Question ID are required' }, { status: 400 });
+  }
+
   try {
-    const docRef = doc(db, 'questionsBank', params.letter, 'questions', params.questionId);
+    const docRef = doc(db, 'questionsBank', letter, 'questions', questionId);
     const docSnap = await getDoc(docRef);
+
     if (!docSnap.exists()) {
       return NextResponse.json({ error: 'Question not found' }, { status: 404 });
     }
-    return NextResponse.json({ data: docSnap.data() }, { status: 200 });
+
+    const data = docSnap.data() as DocumentData;
+    return NextResponse.json({ data }, { status: 200 });
   } catch (error) {
     console.error('Error in GET:', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -21,37 +31,25 @@ export async function GET(
   }
 }
 
-// تحديث سؤال محدد
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { letter: string; questionId: string } }
-) {
-  try {
-    const body = await request.json();
-    const docRef = doc(db, 'questionsBank', params.letter, 'questions', params.questionId);
-    await updateDoc(docRef, {
-      ...body,
-      updatedAt: new Date().toUTCString()
-    });
-    return NextResponse.json({ message: 'Question updated successfully' }, { status: 200 });
-  } catch (error) {
-    console.error('Error in PUT:', error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
-  }
-}
+export async function POST(request: NextRequest) {
+  const { letter, questionId } = await request.json();
 
-// حذف سؤال محدد
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { letter: string; questionId: string } }
-) {
+  if (!letter || !questionId) {
+    return NextResponse.json({ error: 'Letter and Question ID are required' }, { status: 400 });
+  }
+
   try {
-    const docRef = doc(db, 'questionsBank', params.letter, 'questions', params.questionId);
-    await deleteDoc(docRef);
-    return NextResponse.json({ message: 'Question deleted successfully' }, { status: 200 });
+    const docRef = doc(db, 'questionsBank', letter, 'questions', questionId);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      return NextResponse.json({ error: 'Question not found' }, { status: 404 });
+    }
+
+    const data = docSnap.data() as DocumentData;
+    return NextResponse.json({ data }, { status: 200 });
   } catch (error) {
-    console.error('Error in DELETE:', error);
+    console.error('Error in POST:', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }

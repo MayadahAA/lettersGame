@@ -1,6 +1,6 @@
 import { realtimeDb } from '@/src/lib/firebase';
 import { ref, set, get, push } from 'firebase/database';
-import  { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
 // قراءة قائمة الغرف دون إنشاء غرفة جديدة
 export async function GET() {
@@ -20,22 +20,27 @@ export async function GET() {
 }
 
 // إنشاء غرفة جديدة باستخدام POST
-export async function POST() {
+export async function POST(request: Request) {
   try {
-    // يمكنك هنا قراءة البيانات المرسلة من العميل إذا لزم الأمر
-    // const body = await request.json();
+
+    const body = await request.json();
+    const { userId } = body; // استخراج هوية المستخدم من الطلب
+
+    if (!userId) {
+      return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+    }
 
     const roomsRef = ref(realtimeDb, 'rooms');
     const newRoomRef = push(roomsRef);
-    
+
     // كتابة بيانات الغرفة الجديدة
     await set(newRoomRef, {
       metadata: {
-      hostId: crypto.randomUUID(),
-      roomId: newRoomRef.key,
-      createdAt: new Date().toString() ,
-      status: 'waiting',
-      settings: {minPlayers:4, rounds:3, teams:2},
+        hostId: userId,
+        roomId: newRoomRef.key,
+        createdAt: new Date().toString(),
+        status: 'waiting',
+        settings: { minPlayers: 4, rounds: 3, teams: 2 },
       },
       gameState: {
         currentLetter: '',
@@ -45,16 +50,18 @@ export async function POST() {
         currentPlayer: '',
         questionState: 'normal',
         selectedCells: { red: [], green: [] },
-        // scores: { red: 0, green: 0 },
-        rounds: { red: 0, green: 0 }
+        rounds: { red: 0, green: 0 },
       },
-players: { red: [], green: [] },
-spectators: 0,
-buzzerState: { active: false, resetTimestamp: null, buzzerPresses: {} }
-
-
+      players: { red: [], green: [] },
+      host: {
+        id: userId, // استخدام hostId الذي تم إنشاؤه
+        name: '', // يمكن تعديل اسم الهوست لاحقًا
+        role: 'host',
+      },
+      spectators: 0,
+      buzzerState: { active: false, resetTimestamp: null, buzzerPresses: {} },
     });
-    
+
     return NextResponse.json({ roomId: newRoomRef.key });
   } catch (error) {
     if (error instanceof Error) {
@@ -63,5 +70,3 @@ buzzerState: { active: false, resetTimestamp: null, buzzerPresses: {} }
     return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
   }
 }
-
-

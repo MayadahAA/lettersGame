@@ -1,52 +1,84 @@
 import { realtimeDb } from '@/src/lib/firebase';
-import { ref, set, push, get } from 'firebase/database';
-import  { NextResponse, NextRequest } from 'next/server';
+import { ref, get, set, remove } from 'firebase/database';
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
 
-export async function GET(
-    request: NextRequest,
-    { params }: { params: { roomId: string } }
-  ) {
-    try {
-      const playersRef = ref(realtimeDb, `rooms/${params.roomId}/players`);
-      const snapshot = await get(playersRef);
-      const players = snapshot.val() || {};
-      return NextResponse.json({ players });
-    } catch (error) {
-      if (error instanceof Error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
-      }
-      return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
-    }
-  }
+// تعريف نوع اللاعب
+const playerSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  team: z.enum(['red', 'green']),
+  // ... خصائص اللاعب
+});
 
-export async function POST(request: NextRequest, { params }: { params: { roomId: string } }) {
-    try{
-
-        const body = await request.json();
-        const { team, name } = body;
-
-            // مرجع للاعبين داخل الغرفة المحددة
-
-            const playersRef = ref( realtimeDb, `rooms/${params.roomId}/players`)
-            const newPlayerRef = push(playersRef);
-
-            await set(newPlayerRef, {
-                playerId: newPlayerRef.key,
-                team,
-                name,
-                score: 0,
-                isConnected: true,
-                lastActive: new Date().toUTCString(),
-                stats: { correctAnswers: 0 }
-            })
-return NextResponse.json({ message: 'Player added successfully', playerId: newPlayerRef.key }, { status: 200 });
-    }catch (error) {
-        if (error instanceof Error) {
-            return NextResponse.json({ error: error.message }, { status: 500 });
-          }
-          return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
-    }
+// دالة لجلب قائمة اللاعبين من Realtime Database
+async function getPlayersFromDatabase(roomId: string) {
+  const playersRef = ref(realtimeDb, `rooms/${roomId}/players`);
+  const snapshot = await get(playersRef);
+  return snapshot.val();
 }
 
+// دالة لإضافة لاعب جديد إلى Realtime Database
+async function addPlayerToDatabase(roomId: string, player: z.infer<typeof playerSchema>) {
+  // استخدم معرف اللاعب المقدم بدلاً من توليد معرف جديد
+  const playerRef = ref(realtimeDb, `rooms/${roomId}/players/${player.team}/${player.id}`);
+  await set(playerRef, player);
+  return player.id;
+}
 
+// دالة لإزالة لاعب من Realtime Database
+async function removePlayerFromDatabase(roomId: string, playerId: string, team: 'red' | 'green') {
+  const playerRef = ref(realtimeDb, `rooms/${roomId}/players/${team}/${playerId}`);
+  await remove(playerRef);
+}
 
+// API Route لجلب قائمة اللاعبين
+export async function GET(request: Request, { params }: { params: { roomId: string } }) {
+  try {
+    const players = await getPlayersFromDatabase(params.roomId);
+    return NextResponse.json({ players });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
+  }
+}
+
+// API Route لإضافة لاعب جديد
+export async function POST(request: Request, { params }: { params: { roomId: string } }) {
+  try {
+    const body = await request.json();
+    const parsedPlayer = playerSchema.parse(body);
+
+    const playerId = await addPlayerToDatabase(params.roomId, parsedPlayer);
+    return NextResponse.json({ 
+      message: 'Player added successfully', 
+      playerId, 
+      roomId: params.roomId 
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: error.errors }, { status: 400 });
+    }
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
+  }
+}
+
+// API Route لإزالة لاعب
+export async function DELETE(request: Request, { params }: { params: { roomId: string } }) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const playerId = searchParams.get('playerId');
+    const team = searchParams.get('team') as 'red' | 'green';
+
+    if (!playerId || !team) {
+      return NextResponse.json({ error: 'playerId and team are required' }, { status: 400 });
+    }
+
+    await removePlayerFromDatabase(params.roomId, playerId, team);
+    return NextResponse.json({ message: 'Player removed successfully' });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
+  }
+}
