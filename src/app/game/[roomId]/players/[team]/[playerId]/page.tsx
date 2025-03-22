@@ -15,11 +15,12 @@ interface PageProps {
   params: Promise<{
     roomId: string;
     playerId: string;
+    team: string;
   }>;
 }
 
 export default function PlayerPage({ params }: PageProps) {
-  const { roomId, playerId } = React.use(params);
+  const { roomId, team, playerId } = React.use(params);
   const [playerData, setPlayerData] = useState<PlayerData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error] = useState<string | null>(null);
@@ -28,7 +29,7 @@ export default function PlayerPage({ params }: PageProps) {
   useEffect(() => {
     const fetchPlayerData = async () => {
       try {
-        const response = await fetch(`/api/rooms/${roomId}/players/${playerId}`);
+        const response = await fetch(`/api/rooms/${roomId}/players/${team}/${playerId}`);
         
         if (!response.ok) {
           throw new Error('لا يمكن العثور على بيانات اللاعب');
@@ -45,7 +46,7 @@ export default function PlayerPage({ params }: PageProps) {
     };
     
     fetchPlayerData();
-  }, [playerId, roomId]);
+  }, [playerId, roomId, team]);
 
   const PlayerInfo = useMemo(() => {
     if (loading) {

@@ -1,95 +1,66 @@
 import { realtimeDb } from '@/src/lib/firebase';
-import { ref, get, set, remove } from 'firebase/database';
+import { ref, set, get } from 'firebase/database';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
-// تعريف نوع اللاعب
+// تعريف نوع بيانات اللاعب
 const playerSchema = z.object({
   id: z.string(),
   name: z.string(),
   team: z.enum(['red', 'green']),
-  // ... خصائص اللاعب
 });
 
-// دالة لجلب قائمة اللاعبين من Realtime Database
-async function getPlayersFromDatabase(roomId: string) {
-  const playersRef = ref(realtimeDb, `rooms/${roomId}/players`);
-  const snapshot = await get(playersRef);
-  return snapshot.val();
-}
-
-// دالة لإضافة لاعب جديد إلى Realtime Database
-async function addPlayerToDatabase(roomId: string, player: z.infer<typeof playerSchema>) {
-  // استخدم معرف اللاعب المقدم بدلاً من توليد معرف جديد
-  const playerRef = ref(realtimeDb, `rooms/${roomId}/players/${player.team}/${player.id}`);
-  await set(playerRef, player);
-  return player.id;
-}
-
-// دالة لإزالة لاعب من Realtime Database
-async function removePlayerFromDatabase(roomId: string, playerId: string, team: 'red' | 'green') {
-  const playerRef = ref(realtimeDb, `rooms/${roomId}/players/${team}/${playerId}`);
-  await remove(playerRef);
-}
-
-// API Route لجلب قائمة اللاعبين
-export async function GET(
-  request: Request, 
-  { params }: { params: Promise<{ roomId: string }> }
-) {
-  const resolvedParams = await params;
-  try {
-    const players = await getPlayersFromDatabase(resolvedParams.roomId);
-    return NextResponse.json({ players });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+// دالة للتحقق من عدد اللاعبين في فريق معين
+async function getTeamPlayerCount(roomId: string, team: 'red' | 'green') {
+  const teamRef = ref(realtimeDb, `rooms/${roomId}/players/${team}`);
+  const snapshot = await get(teamRef);
+  
+  if (!snapshot.exists()) {
+    return 0;
   }
+  
+  return Object.keys(snapshot.val()).length;
 }
 
-// API Route لإضافة لاعب جديد
+// دالة لإضافة لاعب جديد
 export async function POST(
-  request: Request, 
+  request: Request,
   { params }: { params: Promise<{ roomId: string }> }
 ) {
   const resolvedParams = await params;
   try {
+    const { roomId } = resolvedParams;
+    
+    // قراءة بيانات اللاعب من الطلب
     const body = await request.json();
     const parsedPlayer = playerSchema.parse(body);
-
-    const playerId = await addPlayerToDatabase(resolvedParams.roomId, parsedPlayer);
+    
+    // التحقق من عدد اللاعبين في الفريق المختار
+    const teamCount = await getTeamPlayerCount(roomId, parsedPlayer.team);
+    
+    // التحقق من الحد الأقصى (2 لاعبين لكل فريق)
+    if (teamCount >= 2) {
+      return NextResponse.json({
+        error: `الفريق ${parsedPlayer.team === 'red' ? 'الأحمر' : 'الأخضر'} مكتمل، يرجى اختيار الفريق الآخر`
+      }, { status: 400 });
+    }
+    
+    // إضافة اللاعب إلى قاعدة البيانات
+    const playerRef = ref(realtimeDb, `rooms/${roomId}/players/${parsedPlayer.team}/${parsedPlayer.id}`);
+    await set(playerRef, parsedPlayer);
+    
     return NextResponse.json({ 
-      message: 'Player added successfully', 
-      playerId, 
-      roomId: resolvedParams.roomId 
+      message: 'تمت إضافة اللاعب بنجاح', 
+      playerId: parsedPlayer.id, 
+      roomId 
     });
   } catch (error) {
+    console.error('Error adding player:', error);
+    
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 });
+      return NextResponse.json({ error: 'بيانات اللاعب غير صالحة' }, { status: 400 });
     }
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
-  }
-}
-
-// API Route لإزالة لاعب
-export async function DELETE(
-  request: Request, 
-  { params }: { params: Promise<{ roomId: string }> }
-) {
-  const resolvedParams = await params;
-  try {
-    const { searchParams } = new URL(request.url);
-    const playerId = searchParams.get('playerId');
-    const team = searchParams.get('team') as 'red' | 'green';
-
-    if (!playerId || !team) {
-      return NextResponse.json({ error: 'playerId and team are required' }, { status: 400 });
-    }
-
-    await removePlayerFromDatabase(resolvedParams.roomId, playerId, team);
-    return NextResponse.json({ message: 'Player removed successfully' });
-  } catch (error) {
+    
     const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }

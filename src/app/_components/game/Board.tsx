@@ -514,6 +514,10 @@ const CanvasHexagonBoard: React.FC<HexagonBoardProps> = ({
       setTimerActive(true);
     }
   };
+  const copyRoomCode = () => {
+    navigator.clipboard.writeText(roomCode);
+    alert('تم نسخ رمز الغرفة');
+  };
 
   // واجهة المستخدم
   return (
@@ -522,7 +526,7 @@ const CanvasHexagonBoard: React.FC<HexagonBoardProps> = ({
       <div className="flex justify-between items-center mb-4">
         <div className="flex space-x-2 items-center">
           <div className="bg-blue-100 px-3 py-1 rounded-lg">
-            <span className="font-bold text-blue-800">{roomCode}</span>
+            <span className="font-bold text-blue-800" onClick={copyRoomCode}>{roomCode}</span>
           </div>
           <div className="bg-blue-100 px-3 py-1 rounded-lg">
             <span className="font-bold text-blue-800">4/4</span>

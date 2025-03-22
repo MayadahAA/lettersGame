@@ -47,7 +47,35 @@ export default function Home() {
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [playerName, setPlayerName] = useState("");
   const [playerTeam, setPlayerTeam] = useState<"red" | "green">("red");
+  const [showJoinForm, setShowJoinForm] = useState(false);
+  const [teamCounts, setTeamCounts] = useState({ red: 0, green: 0 });
   const router = useRouter();
+
+  const fetchTeamCounts = async (roomId: string) => {
+    try {
+      const redResponse = await fetch(`/api/rooms/${roomId}/red`);
+      const greenResponse = await fetch(`/api/rooms/${roomId}/green`);
+      
+      if (!redResponse.ok || !greenResponse.ok) {
+        throw new Error('فشل في جلب معلومات الفريق');
+      }
+
+      const redData = await redResponse.json();
+      const greenData = await greenResponse.json();
+
+      setTeamCounts({
+        red: redData.count || 0,
+        green: greenData.count || 0
+      });
+      console.log(`عدد اللاعبين - الفريق الأحمر: ${redData.count || 0}, الفريق الأخضر: ${greenData.count || 0}`);
+      setShowJoinForm(true);
+    } catch (error) {
+      console.error('Error fetching team counts:', error);
+      toast.error('فشل في جلب معلومات الفرق');
+      setShowJoinForm(false);
+    }
+  };
+
   // تم حذف حالة التحميل لأنها لم تُستخدم
   const handleCreateRoom = useCallback(async () => {
     const userId = "guest_" + Math.random().toString(36).substr(2, 9);
@@ -77,8 +105,8 @@ export default function Home() {
   }, [router]);
 
   const handleJoinRoom = async () => {
-    if ( !playerName || !playerTeam) {
-      toast.error("يرجى إدخال اسم اللاعب والفريق.");
+    if (!roomCode || !playerName || !playerTeam) {
+      toast.error("يرجى إدخال رمز الغرفة واسم اللاعب والفريق.");
       return;
     }
     try {
@@ -89,7 +117,7 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          id: playerId,  // Add this line
+          id: playerId,
           name: playerName, 
           team: playerTeam 
         }),
@@ -98,6 +126,8 @@ export default function Home() {
         const errorData = await response.json();
         throw new Error(errorData.error);
       }
+      
+      // تمرير معرف الغرفة كمعلمة استعلام
       router.push(`/game/${roomCode}/players/${playerTeam}/${playerId}`);
     } catch (err) {
       toast.error(
@@ -173,9 +203,37 @@ export default function Home() {
                       placeholder="أدخل الرمز هنا"
                       className="room-code-input flex-1 p-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       value={roomCode}
-                      onChange={(e) => setRoomCode(e.target.value)}
+                      onChange={(e) => {
+                        setRoomCode(e.target.value);
+                        if (e.target.value) {
+                          fetchTeamCounts(e.target.value);
+                        } else {
+                          setShowJoinForm(false);
+                        }
+                      }}
                     />
+                     <Button 
+              variant="primary"
+              onClick={() => roomCode && fetchTeamCounts(roomCode)}
+              disabled={!roomCode}
+            >
+              تحقق
+            </Button>
                   </div>
+                  
+                  {showJoinForm && (
+                    <div className="mt-4 mb-4 flex justify-around bg-gray-50 p-3 rounded-lg">
+                      <div className="text-center">
+                        <span className="text-red-600 font-bold">الفريق الأحمر</span>
+                        <div className="text-2xl font-bold">{teamCounts.red}/2</div>
+                      </div>
+                      <div className="text-center">
+                        <span className="text-green-600 font-bold">الفريق الأخضر</span>
+                        <div className="text-2xl font-bold">{teamCounts.green}/2</div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="mt-2">
                     <input
                       type="text"

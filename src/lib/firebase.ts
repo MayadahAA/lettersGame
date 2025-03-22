@@ -1,7 +1,10 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getDatabase } from "firebase/database";
-
+const databaseURL = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL;
+if (!databaseURL) {
+  console.error('متغير البيئة NEXT_PUBLIC_FIREBASE_DATABASE_URL غير متوفر!');
+}
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,

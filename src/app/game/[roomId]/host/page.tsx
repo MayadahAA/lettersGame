@@ -17,57 +17,97 @@ interface RoomData {
   letter: string;
 }
 
+interface PlayerCount {
+  total: number;
+  red: number;
+  green: number;
+}
+
 export default function HostPage({ params }: PageProps) {
   // فك الـ Promise باستخدام React.use()
   const { roomId } = React.use(params);
   const [roomData, setRoomData] = useState<RoomData | null>(null);
-  const [isLoadingRoomData, setIsLoadingRoomData] = useState(true);
+  const [playerCount, setPlayerCount] = useState<PlayerCount>({ total: 0, red: 0, green: 0 });
 
   // استدعاء useMemo بشكل غير مشروط
   const boardData = useMemo(() => ({
     questions: roomData?.questions || {},
     timeLimit: roomData?.timeLimit || 10,
-    players: roomData?.players || [
-      { id: 1, name: "لاعب 1", active: true, team: 'red' },
-      { id: 2, name: "لاعب 2", active: true, team: 'red' },
-      { id: 3, name: "لاعب 3", active: true, team: 'green' },
-      { id: 4, name: "لاعب 4", active: true, team: 'green' },
-    ],
+    players: roomData?.players || [],
     teamName: roomData?.teamName || "لعبة حروف",
     letter: roomData?.letter || '',
   }), [roomData]);
+  // دالة لحساب عدد اللاعبين - تعديلها لتتعامل مع الهيكل الصحيح للبيانات
+  const countPlayers = (data: { roomInfo?: { players?: { red?: Record<string, unknown>; green?: Record<string, unknown> } } }) => {
+    if (!data || !data.roomInfo || !data.roomInfo.players) {
+      return { total: 0, red: 0, green: 0 };
+    }
+    // التعامل مع هيكل اللاعبين حسب تنسيق البيانات في قاعدة بيانات Firebase
+    const players = data.roomInfo.players;
+    
+    // حساب عدد اللاعبين في كل فريق
+    let redCount = 0;
+    let greenCount = 0;
+    
+    // التحقق من وجود الفرق وحساب اللاعبين
+    if (players.red && typeof players.red === 'object') {
+      redCount = Object.keys(players.red).length;
+    }
+    
+    if (players.green && typeof players.green === 'object') {
+      greenCount = Object.keys(players.green).length;
+    }
+    
+    return {
+      red: redCount,
+      green: greenCount,
+      total: redCount + greenCount
+    };
+  };
 
   useEffect(() => {
     const fetchRoomData = async () => {
-      if (!isLoadingRoomData && roomId) {
-        setIsLoadingRoomData(true);
-        try {
-          const response = await fetch(`/api/rooms/${roomId}`);
-          if (!response.ok) {
-            throw new Error('Failed to fetch room data');
-          }
-          const data = await response.json();
-          setRoomData(data);
-          console.log('Room data:', data);
-        } catch (err) {
-          console.error('Error fetching room data:', err);
-        } finally {
-          setIsLoadingRoomData(false);
+      try {
+        const response = await fetch(`/api/rooms/${roomId}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch room data');
         }
+        const data = await response.json();
+        setRoomData(data); // يحتفظ بالهيكل الأصلي للبيانات في roomData
+        
+        // استخدام دالة العد المعدلة
+        const counts = countPlayers(data);
+        setPlayerCount(counts);
+        
+        console.log('Room data:', data);
+        console.log('Player counts:', counts);
+      } catch (err) {
+        console.error('Error fetching room data:', err);
+      } finally {
+        console.log('Room data fetched successfully');
       }
     };
 
     fetchRoomData();
-  }, [isLoadingRoomData, roomId]);
-
-  if (isLoadingRoomData) {
-    return <div>جاري التحميل...</div>;
-  }
-
+    
+    // تحديث البيانات كل 10 ثوانٍ
+    const interval = setInterval(fetchRoomData, 10000);
+    return () => clearInterval(interval);
+  }, [roomId]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4">
-      <h1 className="text-3xl font-bold mb-8">لعبة الحروف</h1>
+      <h1 className="text-3xl font-bold mb-4">لعبة الحروف</h1>
+      
+      {/* عرض عدد اللاعبين */}
+      <div className="mb-6 text-center">
+        <p className="text-lg">عدد اللاعبين: <span className="font-bold">{playerCount.total}</span></p>
+        <div className="flex justify-center gap-4 mt-2">
+          <p className="text-red-600">الفريق الأحمر: <span className="font-bold">{playerCount.red}</span></p>
+          <p className="text-green-600">الفريق الأخضر: <span className="font-bold">{playerCount.green}</span></p>
+        </div>
+      </div>
+      
       <Board
         roomCode={roomId}
         {...boardData}
