@@ -98,7 +98,7 @@ export default function Home() {
         const errorData = await response.json();
         throw new Error(errorData.error);
       }
-      router.push(`/game/${roomCode}/players/${playerId}`);
+      router.push(`/game/${roomCode}/players/${playerTeam}/${playerId}`);
     } catch (err) {
       toast.error(
         "حدث خطأ أثناء الانضمام للغرفة: " +

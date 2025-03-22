@@ -1,5 +1,4 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getDatabase } from "firebase/database";
 
@@ -16,6 +15,9 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const realtimeDb = getDatabase(app);
+
+
+console.log('API Key:', process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
+console.log('Database URL:', process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL);

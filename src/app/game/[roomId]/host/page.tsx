@@ -1,8 +1,6 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { auth } from '@/src/lib/firebase';
-import { useAuthState } from 'react-firebase-hooks/auth';
 import Board from '@/src/app/_components/game/Board';
 
 interface PageProps {
@@ -22,7 +20,6 @@ interface RoomData {
 export default function HostPage({ params }: PageProps) {
   // فك الـ Promise باستخدام React.use()
   const { roomId } = React.use(params);
-  const [loading, error] = useAuthState(auth);
   const [roomData, setRoomData] = useState<RoomData | null>(null);
   const [isLoadingRoomData, setIsLoadingRoomData] = useState(true);
 
@@ -42,7 +39,7 @@ export default function HostPage({ params }: PageProps) {
 
   useEffect(() => {
     const fetchRoomData = async () => {
-      if (!loading && roomId) {
+      if (!isLoadingRoomData && roomId) {
         setIsLoadingRoomData(true);
         try {
           const response = await fetch(`/api/rooms/${roomId}`);
@@ -61,15 +58,12 @@ export default function HostPage({ params }: PageProps) {
     };
 
     fetchRoomData();
-  }, [loading, roomId]);
+  }, [isLoadingRoomData, roomId]);
 
-  if (loading || isLoadingRoomData) {
+  if (isLoadingRoomData) {
     return <div>جاري التحميل...</div>;
   }
 
-  if (error) {
-    return <div>حدث خطأ: {error}</div>;
-  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4">

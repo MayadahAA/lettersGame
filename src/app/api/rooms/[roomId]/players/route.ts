@@ -33,9 +33,13 @@ async function removePlayerFromDatabase(roomId: string, playerId: string, team: 
 }
 
 // API Route لجلب قائمة اللاعبين
-export async function GET(request: Request, { params }: { params: { roomId: string } }) {
+export async function GET(
+  request: Request, 
+  { params }: { params: Promise<{ roomId: string }> }
+) {
+  const resolvedParams = await params;
   try {
-    const players = await getPlayersFromDatabase(params.roomId);
+    const players = await getPlayersFromDatabase(resolvedParams.roomId);
     return NextResponse.json({ players });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -44,16 +48,20 @@ export async function GET(request: Request, { params }: { params: { roomId: stri
 }
 
 // API Route لإضافة لاعب جديد
-export async function POST(request: Request, { params }: { params: { roomId: string } }) {
+export async function POST(
+  request: Request, 
+  { params }: { params: Promise<{ roomId: string }> }
+) {
+  const resolvedParams = await params;
   try {
     const body = await request.json();
     const parsedPlayer = playerSchema.parse(body);
 
-    const playerId = await addPlayerToDatabase(params.roomId, parsedPlayer);
+    const playerId = await addPlayerToDatabase(resolvedParams.roomId, parsedPlayer);
     return NextResponse.json({ 
       message: 'Player added successfully', 
       playerId, 
-      roomId: params.roomId 
+      roomId: resolvedParams.roomId 
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -65,7 +73,11 @@ export async function POST(request: Request, { params }: { params: { roomId: str
 }
 
 // API Route لإزالة لاعب
-export async function DELETE(request: Request, { params }: { params: { roomId: string } }) {
+export async function DELETE(
+  request: Request, 
+  { params }: { params: Promise<{ roomId: string }> }
+) {
+  const resolvedParams = await params;
   try {
     const { searchParams } = new URL(request.url);
     const playerId = searchParams.get('playerId');
@@ -75,7 +87,7 @@ export async function DELETE(request: Request, { params }: { params: { roomId: s
       return NextResponse.json({ error: 'playerId and team are required' }, { status: 400 });
     }
 
-    await removePlayerFromDatabase(params.roomId, playerId, team);
+    await removePlayerFromDatabase(resolvedParams.roomId, playerId, team);
     return NextResponse.json({ message: 'Player removed successfully' });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

@@ -37,9 +37,13 @@ async function getQuestionFromFirestore(questionId: string) {
 }
 
 // API Route لجلب حالة اللعبة
-export async function GET(request: Request, { params }: { params: { roomId: string } }) {
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ roomId: string }> }
+) {
+  const resolvedParams = await params;
   try {
-    const gameState = await getGameStateFromDatabase(params.roomId);
+    const gameState = await getGameStateFromDatabase(resolvedParams.roomId);
     if (!gameState) {
       return NextResponse.json({ error: 'Game state not found' }, { status: 404 });
     }
@@ -51,7 +55,11 @@ export async function GET(request: Request, { params }: { params: { roomId: stri
 }
 
 // API Route لتحديث حالة اللعبة
-export async function PUT(request: Request, { params }: { params: { roomId: string } }) {
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ roomId: string }> }
+) {
+  const resolvedParams = await params;
   try {
     const body = await request.json();
     const parsedGameState = gameStateSchema.parse(body); // التحقق من صحة البيانات
@@ -61,7 +69,7 @@ export async function PUT(request: Request, { params }: { params: { roomId: stri
         const questionData = await getQuestionFromFirestore(parsedGameState.currentQuestion)
         parsedGameState.currentAnswer = questionData?.answer
     }
-    await updateGameStateInDatabase(params.roomId, parsedGameState);
+    await updateGameStateInDatabase(resolvedParams.roomId, parsedGameState);
     return NextResponse.json({ message: 'Game state updated successfully' });
   } catch (error) {
     if (error instanceof z.ZodError) {
